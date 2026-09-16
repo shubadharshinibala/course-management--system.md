@@ -1,19 +1,830 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Course Management System</title>
+<meta charset="UTF-8">
+<title>Registrar — Course Management System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C2B39;
+    --paper:#F6F3EC;
+    --paper-raised:#FFFFFF;
+    --rule:#D8D0BC;
+    --brass:#A8763E;
+    --brass-deep:#8A5E2C;
+    --forest:#3F6B4A;
+    --forest-deep:#2F5238;
+    --rust:#9C3B3B;
+    --rust-deep:#7E2E2E;
+    --muted:#6B6153;
+    --focus:#2B5FAA;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --ink:#EDE7D9;
+      --paper:#171512;
+      --paper-raised:#211E19;
+      --rule:#3A352C;
+      --muted:#A79C89;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#EDE7D9;
+    --paper:#171512;
+    --paper-raised:#211E19;
+    --rule:#3A352C;
+    --muted:#A79C89;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    line-height:1.5;
+  }
+  ::selection{ background:var(--brass); color:#fff; }
+  a{ color:var(--brass-deep); }
+
+  /* ---------- Header / Ledger banner ---------- */
+  .banner{
+    border-bottom:2px solid var(--ink);
+    padding:28px clamp(16px,5vw,56px) 18px;
+  }
+  .banner-row{
+    display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap;
+    max-width:1180px; margin:0 auto;
+  }
+  .crest{
+    font-family:'Source Serif 4',serif; font-weight:700; font-size:clamp(28px,4vw,42px);
+    letter-spacing:-0.01em; margin:0;
+  }
+  .crest small{
+    display:block; font-family:'Inter',sans-serif; font-weight:500; font-size:13px;
+    color:var(--muted); letter-spacing:.04em; margin-top:4px;
+  }
+  .reg-meta{
+    text-align:right; font-family:'Roboto Mono',monospace; font-size:12.5px; color:var(--muted);
+  }
+  .reg-meta div{ margin-top:2px; }
+
+  /* ---------- Tabs ---------- */
+  .tabbar{
+    display:flex; gap:2px; max-width:1180px; margin:0 auto; padding:0 clamp(16px,5vw,56px);
+    border-bottom:1px solid var(--rule); overflow-x:auto;
+  }
+  .tabbtn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:14.5px; color:var(--muted);
+    background:none; border:none; padding:14px 18px 12px; cursor:pointer;
+    border-bottom:3px solid transparent; white-space:nowrap;
+  }
+  .tabbtn:hover{ color:var(--ink); }
+  .tabbtn.active{ color:var(--ink); border-bottom-color:var(--brass); }
+  .tabbtn:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+
+  main{ max-width:1180px; margin:0 auto; padding:32px clamp(16px,5vw,56px) 80px; }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  h2.section-title{
+    font-family:'Source Serif 4',serif; font-weight:600; font-size:26px; margin:0 0 4px;
+  }
+  p.section-sub{ color:var(--muted); font-size:14.5px; margin:0 0 24px; max-width:62ch; }
+
+  /* ---------- Dashboard stat cards ---------- */
+  .stat-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1px;
+    background:var(--rule); border:1px solid var(--rule); margin-bottom:32px; }
+  .stat{ background:var(--paper-raised); padding:20px; }
+  .stat .num{ font-family:'Source Serif 4',serif; font-size:34px; font-weight:600; line-height:1; }
+  .stat .lbl{ font-size:12.5px; color:var(--muted); margin-top:6px; }
+
+  .dept-breakdown{ margin-top:8px; }
+  .dept-row{ display:grid; grid-template-columns:140px 1fr 44px; align-items:center; gap:12px;
+    padding:9px 0; border-bottom:1px solid var(--rule); font-size:13.5px; }
+  .dept-row:last-child{ border-bottom:none; }
+  .bar-track{ background:var(--rule); height:8px; }
+  .bar-fill{ background:var(--brass); height:8px; }
+
+  /* ---------- Form (Create/Edit) ---------- */
+  .card{
+    background:var(--paper-raised); border:1px solid var(--rule); padding:24px;
+  }
+  .form-title{ font-family:'Source Serif 4',serif; font-size:19px; font-weight:600; margin:0 0 18px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px 20px; }
+  @media(max-width:640px){ .grid2{ grid-template-columns:1fr; } }
+  .field{ display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+  .field label{ font-size:12.5px; font-weight:600; color:var(--muted); letter-spacing:.01em; }
+  .field input, .field select, .field textarea{
+    font-family:'Inter',sans-serif; font-size:14.5px; padding:9px 10px;
+    border:1px solid var(--rule); background:var(--paper); color:var(--ink); border-radius:2px;
+  }
+  .field textarea{ resize:vertical; min-height:64px; }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:2px solid var(--focus); outline-offset:1px; border-color:var(--focus);
+  }
+  .field.error input, .field.error select{ border-color:var(--rust); }
+  .field .errmsg{ font-size:12px; color:var(--rust-deep); min-height:14px; }
+  .field .hint{ font-size:11.5px; color:var(--muted); }
+
+  .btnrow{ display:flex; gap:10px; margin-top:6px; flex-wrap:wrap; }
+  button{ font-family:'Inter',sans-serif; cursor:pointer; }
+  .btn{
+    border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+    font-weight:600; font-size:14px; padding:10px 20px; border-radius:2px;
+  }
+  .btn:hover{ background:var(--brass-deep); border-color:var(--brass-deep); }
+  .btn.secondary{ background:transparent; color:var(--ink); border-color:var(--rule); }
+  .btn.secondary:hover{ border-color:var(--ink); background:transparent; }
+  .btn.danger{ background:var(--rust); border-color:var(--rust); }
+  .btn.danger:hover{ background:var(--rust-deep); border-color:var(--rust-deep); }
+  .btn:focus-visible, .tabbtn:focus-visible, .iconbtn:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+
+  /* ---------- Course list ---------- */
+  .list-toolbar{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .search-wrap{ display:flex; gap:8px; flex:1; min-width:220px; }
+  .search-wrap input, .search-wrap select{
+    font-family:'Inter',sans-serif; font-size:14px; padding:9px 10px; border:1px solid var(--rule);
+    background:var(--paper-raised); color:var(--ink); border-radius:2px;
+  }
+  .search-wrap input{ flex:1; min-width:160px; }
+  .count-tag{ font-size:12.5px; color:var(--muted); font-family:'Roboto Mono',monospace; }
+
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  thead th{
+    text-align:left; font-size:11.5px; font-weight:600; color:var(--muted); letter-spacing:.03em;
+    padding:0 12px 10px; border-bottom:1px solid var(--ink);
+  }
+  tbody td{ padding:13px 12px; border-bottom:1px solid var(--rule); vertical-align:top; }
+  tbody tr:hover{ background:rgba(168,118,62,0.06); }
+  .code-cell{ font-family:'Roboto Mono',monospace; font-weight:500; }
+  .seat-pill{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:600; }
+  .seat-ok{ background:rgba(63,107,74,0.15); color:var(--forest-deep); }
+  .seat-low{ background:rgba(168,118,62,0.18); color:var(--brass-deep); }
+  .seat-full{ background:rgba(156,59,59,0.15); color:var(--rust-deep); }
+  .row-actions{ display:flex; gap:6px; }
+  .iconbtn{
+    background:none; border:1px solid var(--rule); padding:6px 10px; font-size:12.5px; font-weight:600;
+    border-radius:2px; color:var(--ink);
+  }
+  .iconbtn:hover{ border-color:var(--ink); }
+  .iconbtn.del:hover{ border-color:var(--rust); color:var(--rust-deep); }
+
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty-state .big{ font-family:'Source Serif 4',serif; font-size:19px; color:var(--ink); margin-bottom:6px; }
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper); padding:12px 20px; border-radius:3px;
+    font-size:14px; font-weight:500; opacity:0; pointer-events:none; transition:all .25s ease;
+    z-index:50; max-width:90vw; text-align:center;
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  #toast.err{ background:var(--rust-deep); }
+
+  /* ---------- Modal (delete confirm) ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(23,21,18,0.55); display:none;
+    align-items:center; justify-content:center; z-index:60; padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .modal{ background:var(--paper-raised); border:1px solid var(--rule); padding:26px; max-width:400px; width:100%; }
+  .modal h3{ font-family:'Source Serif 4',serif; font-size:18px; margin:0 0 10px; }
+  .modal p{ font-size:14px; color:var(--muted); margin:0 0 20px; }
+
+  /* ---------- API docs panel ---------- */
+  .endpoint{
+    display:grid; grid-template-columns:70px 1fr; gap:14px; padding:14px 0; border-bottom:1px solid var(--rule);
+    align-items:start;
+  }
+  .method{
+    font-family:'Roboto Mono',monospace; font-size:11.5px; font-weight:700; padding:3px 0; text-align:center;
+    border-radius:2px; height:fit-content;
+  }
+  .m-get{ background:rgba(63,107,74,0.15); color:var(--forest-deep); }
+  .m-post{ background:rgba(43,95,170,0.15); color:#2B5FAA; }
+  .m-put{ background:rgba(168,118,62,0.18); color:var(--brass-deep); }
+  .m-delete{ background:rgba(156,59,59,0.15); color:var(--rust-deep); }
+  .endpoint code{ font-family:'Roboto Mono',monospace; font-size:13px; }
+  .endpoint .desc{ font-size:13px; color:var(--muted); margin-top:3px; }
+
+  .arch-diagram{
+    font-family:'Roboto Mono',monospace; font-size:12.5px; background:var(--paper-raised);
+    border:1px solid var(--rule); padding:20px; overflow-x:auto; white-space:pre; line-height:1.7;
+    color:var(--ink);
+  }
+
+  .sub-h{ font-family:'Source Serif 4',serif; font-weight:600; font-size:16px; margin:32px 0 12px; }
+</style>
 </head>
 <body>
 
-    <h1>Course Management System</h1>
+<div class="banner">
+  <div class="banner-row">
+    <div>
+      <h1 class="crest">Office of the Registrar
+        <small>Course Management System · Academic Records Division</small>
+      </h1>
+    </div>
+    <div class="reg-meta">
+      <div id="clock-date">—</div>
+      <div id="course-total-meta">0 courses on file</div>
+    </div>
+  </div>
+</div>
 
-    <p>Click the button below to open the website.</p>
+<div class="tabbar">
+  <button class="tabbtn active" data-tab="dashboard">Dashboard</button>
+  <button class="tabbtn" data-tab="courses">Courses</button>
+  <button class="tabbtn" data-tab="api">API Reference</button>
+  <button class="tabbtn" data-tab="arch">Architecture</button>
+</div>
 
-    <a href="file:///C:/Users/ELCOT/AppData/Local/Packages/5319275A.WhatsAppDesktop_cv1g1gvanyjgm/LocalState/sessions/38F8F37DEC849E35E75DF6003A6B8937E5A62689/transfers/2026-38/course-management-system%20(2).html" target="_blank">
-        Open My Website
-    </a>
+<main>
 
+  <!-- ============ DASHBOARD ============ -->
+  <section class="panel active" id="panel-dashboard">
+    <h2 class="section-title">Term overview</h2>
+    <p class="section-sub">A live summary of the course catalog, drawn from the same records the CRUD screen edits.</p>
+    <div class="stat-row" id="stat-row"></div>
+    <div class="card">
+      <div class="form-title">Courses by department</div>
+      <div class="dept-breakdown" id="dept-breakdown"></div>
+    </div>
+  </section>
+
+  <!-- ============ COURSES (CRUD) ============ -->
+  <section class="panel" id="panel-courses">
+    <h2 class="section-title">Course catalog</h2>
+    <p class="section-sub">Add, edit, search, and remove courses. Every change is validated and saved immediately.</p>
+
+    <div class="card" style="margin-bottom:28px;">
+      <div class="form-title" id="form-title-text">Add a new course</div>
+      <form id="course-form" novalidate>
+        <input type="hidden" id="f-id">
+        <div class="grid2">
+          <div class="field" id="wrap-code">
+            <label for="f-code">Course code *</label>
+            <input id="f-code" placeholder="e.g. CS301" autocomplete="off">
+            <div class="errmsg" id="err-code"></div>
+          </div>
+          <div class="field" id="wrap-name">
+            <label for="f-name">Course name *</label>
+            <input id="f-name" placeholder="e.g. Database Systems">
+            <div class="errmsg" id="err-name"></div>
+          </div>
+          <div class="field" id="wrap-instructor">
+            <label for="f-instructor">Instructor *</label>
+            <input id="f-instructor" placeholder="e.g. Dr. Priya Raman">
+            <div class="errmsg" id="err-instructor"></div>
+          </div>
+          <div class="field" id="wrap-dept">
+            <label for="f-dept">Department *</label>
+            <select id="f-dept">
+              <option value="">Select department</option>
+              <option>Computer Science</option>
+              <option>Electronics</option>
+              <option>Mechanical</option>
+              <option>Civil</option>
+              <option>Mathematics</option>
+              <option>Management</option>
+            </select>
+            <div class="errmsg" id="err-dept"></div>
+          </div>
+          <div class="field" id="wrap-credits">
+            <label for="f-credits">Credits (1–6) *</label>
+            <input id="f-credits" type="number" min="1" max="6" placeholder="e.g. 4">
+            <div class="errmsg" id="err-credits"></div>
+          </div>
+          <div class="field" id="wrap-semester">
+            <label for="f-semester">Semester *</label>
+            <select id="f-semester">
+              <option value="">Select semester</option>
+              <option>Semester 1</option><option>Semester 2</option><option>Semester 3</option>
+              <option>Semester 4</option><option>Semester 5</option><option>Semester 6</option>
+              <option>Semester 7</option><option>Semester 8</option>
+            </select>
+            <div class="errmsg" id="err-semester"></div>
+          </div>
+          <div class="field" id="wrap-seats">
+            <label for="f-seats">Total seats *</label>
+            <input id="f-seats" type="number" min="1" max="500" placeholder="e.g. 60">
+            <div class="errmsg" id="err-seats"></div>
+          </div>
+          <div class="field" id="wrap-enrolled">
+            <label for="f-enrolled">Currently enrolled</label>
+            <input id="f-enrolled" type="number" min="0" placeholder="e.g. 42">
+            <div class="errmsg" id="err-enrolled"></div>
+            <div class="hint">Leave as 0 for a newly created course.</div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-desc">Description</label>
+          <textarea id="f-desc" placeholder="Short course description (optional)"></textarea>
+        </div>
+        <div class="btnrow">
+          <button type="submit" class="btn" id="submit-btn">Add course</button>
+          <button type="button" class="btn secondary" id="cancel-edit-btn" style="display:none;">Cancel edit</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="list-toolbar">
+      <div class="search-wrap">
+        <input type="text" id="search-input" placeholder="Search by code, name, or instructor…">
+        <select id="filter-dept">
+          <option value="">All departments</option>
+          <option>Computer Science</option>
+          <option>Electronics</option>
+          <option>Mechanical</option>
+          <option>Civil</option>
+          <option>Mathematics</option>
+          <option>Management</option>
+        </select>
+      </div>
+      <div class="count-tag" id="result-count">0 records</div>
+    </div>
+
+    <div class="card" style="padding:0; overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th><th>Course</th><th>Instructor</th><th>Dept.</th>
+            <th>Sem.</th><th>Credits</th><th>Seats</th><th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="course-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state" style="display:none;">
+        <div class="big">No courses match your search</div>
+        <div>Try a different keyword, or clear the filters to see the full catalog.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ API REFERENCE ============ -->
+  <section class="panel" id="panel-api">
+    <h2 class="section-title">REST API reference</h2>
+    <p class="section-sub">This is the contract the frontend follows when talking to the backend. Use this table directly in your project report's API documentation section.</p>
+    <div class="card">
+      <div class="endpoint">
+        <div class="method m-post">POST</div>
+        <div><code>/api/courses/</code><div class="desc">Create a new course record. Returns the created course with a generated <code>id</code>. 400 if validation fails or the course code already exists.</div></div>
+      </div>
+      <div class="endpoint">
+        <div class="method m-get">GET</div>
+        <div><code>/api/courses/</code><div class="desc">Return the list of all courses. Supports optional <code>?search=</code> and <code>?department=</code> query parameters.</div></div>
+      </div>
+      <div class="endpoint">
+        <div class="method m-get">GET</div>
+        <div><code>/api/courses/{id}/</code><div class="desc">Return a single course by its ID. 404 if the ID does not exist.</div></div>
+      </div>
+      <div class="endpoint">
+        <div class="method m-put">PUT</div>
+        <div><code>/api/courses/{id}/</code><div class="desc">Update an existing course. Full validation is re-run server-side. 404 if the ID does not exist.</div></div>
+      </div>
+      <div class="endpoint">
+        <div class="method m-delete">DELETE</div>
+        <div><code>/api/courses/{id}/</code><div class="desc">Remove a course record permanently. 404 if the ID does not exist.</div></div>
+      </div>
+    </div>
+
+    <div class="sub-h">Validation rules enforced (client + server)</div>
+    <div class="card">
+      <ul style="margin:0; padding-left:20px; font-size:14px; color:var(--ink); line-height:1.9;">
+        <li><strong>Course code</strong> — required, unique across the catalog, alphanumeric.</li>
+        <li><strong>Course name, instructor, department, semester</strong> — required, cannot be empty.</li>
+        <li><strong>Credits</strong> — required integer between 1 and 6.</li>
+        <li><strong>Total seats</strong> — required integer between 1 and 500.</li>
+        <li><strong>Enrolled count</strong> — optional integer, cannot exceed total seats.</li>
+      </ul>
+    </div>
+
+    <div class="sub-h">Sample request/response</div>
+    <div class="card">
+<pre style="margin:0; font-family:'Roboto Mono',monospace; font-size:12.5px; overflow-x:auto; line-height:1.7;">POST /api/courses/
+{
+  "code": "CS301",
+  "name": "Database Systems",
+  "instructor": "Dr. Priya Raman",
+  "department": "Computer Science",
+  "semester": "Semester 5",
+  "credits": 4,
+  "totalSeats": 60,
+  "enrolled": 0,
+  "description": "Relational databases, SQL, and normalization."
+}
+
+201 Created
+{ "id": "c_1a2b3c", "code": "CS301", ... }</pre>
+    </div>
+  </section>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section class="panel" id="panel-arch">
+    <h2 class="section-title">System architecture</h2>
+    <p class="section-sub">Use this diagram and stack summary directly in your SOP-required documentation.</p>
+    <div class="arch-diagram">  User
+   │
+   ▼
+┌─────────────────────────┐
+│ Frontend (HTML/CSS/JS)  │   ← this application
+│ forms · validation · UI │
+└────────────┬─────────────┘
+             │  fetch/Axios · JSON over HTTPS
+             ▼
+┌─────────────────────────┐
+│ REST API layer          │
+│ Django REST Framework   │
+│  (or Spring Boot)       │
+└────────────┬─────────────┘
+             │  ORM / JPA
+             ▼
+┌─────────────────────────┐
+│ Database                │
+│ SQLite / MySQL /        │
+│ PostgreSQL               │
+└─────────────────────────┘</div>
+
+    <div class="sub-h">Entity: Course</div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Constraint</th></tr></thead>
+        <tbody>
+          <tr><td class="code-cell">id</td><td>UUID / Auto</td><td>Primary key</td></tr>
+          <tr><td class="code-cell">code</td><td>VARCHAR(10)</td><td>NOT NULL, UNIQUE</td></tr>
+          <tr><td class="code-cell">name</td><td>VARCHAR(120)</td><td>NOT NULL</td></tr>
+          <tr><td class="code-cell">instructor</td><td>VARCHAR(120)</td><td>NOT NULL</td></tr>
+          <tr><td class="code-cell">department</td><td>VARCHAR(60)</td><td>NOT NULL</td></tr>
+          <tr><td class="code-cell">semester</td><td>VARCHAR(20)</td><td>NOT NULL</td></tr>
+          <tr><td class="code-cell">credits</td><td>INTEGER</td><td>NOT NULL, 1–6</td></tr>
+          <tr><td class="code-cell">total_seats</td><td>INTEGER</td><td>NOT NULL, 1–500</td></tr>
+          <tr><td class="code-cell">enrolled</td><td>INTEGER</td><td>DEFAULT 0</td></tr>
+          <tr><td class="code-cell">description</td><td>TEXT</td><td>NULLABLE</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:13px; color:var(--muted); margin-top:18px;">
+      Note: this hosted page implements the frontend and a REST-shaped data layer with persistent storage so every CRUD operation is fully functional end-to-end. For your submission, pair it with the Django/Spring Boot + database backend built from the SOP's section 7.5–7.6, using this page's API contract above.
+    </p>
+  </section>
+
+</main>
+
+<div id="toast"></div>
+
+<div class="overlay" id="delete-overlay">
+  <div class="modal">
+    <h3>Delete this course?</h3>
+    <p id="delete-modal-text">This will permanently remove the record. This cannot be undone.</p>
+    <div class="btnrow">
+      <button class="btn danger" id="confirm-delete-btn">Delete</button>
+      <button class="btn secondary" id="cancel-delete-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- "Backend" data layer (REST-shaped, persisted per viewer) ----------
+  const STORE_KEY = "cms_courses_v1";
+
+  function uid(){ return "c_" + Math.random().toString(36).slice(2,9); }
+
+  function seed(){
+    return [
+      { id:uid(), code:"CS301", name:"Database Systems", instructor:"Dr. Priya Raman", department:"Computer Science", semester:"Semester 5", credits:4, totalSeats:60, enrolled:52, description:"Relational databases, SQL, normalization, and transactions." },
+      { id:uid(), code:"CS205", name:"Data Structures", instructor:"Prof. Arjun Mehta", department:"Computer Science", semester:"Semester 3", credits:4, totalSeats:70, enrolled:70, description:"Core data structures and algorithmic complexity." },
+      { id:uid(), code:"EC210", name:"Digital Electronics", instructor:"Dr. Kavya Nair", department:"Electronics", semester:"Semester 3", credits:3, totalSeats:50, enrolled:31, description:"Logic gates, combinational and sequential circuits." },
+      { id:uid(), code:"MA101", name:"Engineering Mathematics I", instructor:"Dr. Suresh Iyer", department:"Mathematics", semester:"Semester 1", credits:4, totalSeats:120, enrolled:98, description:"Calculus and linear algebra foundations." },
+      { id:uid(), code:"ME402", name:"Thermodynamics", instructor:"Prof. Lakshmi Bose", department:"Mechanical", semester:"Semester 4", credits:3, totalSeats:45, enrolled:12, description:"Laws of thermodynamics and heat engine cycles." }
+    ];
+  }
+
+  function loadAll(){
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      if(!raw){ const s = seed(); saveAll(s); return s; }
+      return JSON.parse(raw);
+    }catch(e){ return seed(); }
+  }
+  function saveAll(list){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(list)); }catch(e){ /* storage unavailable */ }
+  }
+
+  // Simulated REST endpoints — mirrors the API Reference tab exactly.
+  const api = {
+    GET_all(){ return loadAll(); },
+    GET_one(id){ return loadAll().find(c=>c.id===id) || null; },
+    POST_create(payload){
+      const list = loadAll();
+      const record = Object.assign({ id: uid(), enrolled:0 }, payload);
+      list.push(record);
+      saveAll(list);
+      return record;
+    },
+    PUT_update(id, payload){
+      const list = loadAll();
+      const idx = list.findIndex(c=>c.id===id);
+      if(idx === -1) return null;
+      list[idx] = Object.assign({}, list[idx], payload);
+      saveAll(list);
+      return list[idx];
+    },
+    DELETE_one(id){
+      let list = loadAll();
+      const before = list.length;
+      list = list.filter(c=>c.id!==id);
+      saveAll(list);
+      return list.length < before;
+    }
+  };
+
+  // ---------- Tabs ----------
+  const tabbtns = document.querySelectorAll(".tabbtn");
+  tabbtns.forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      tabbtns.forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
+      if(btn.dataset.tab === "dashboard") renderDashboard();
+    });
+  });
+
+  // ---------- Clock / meta ----------
+  function renderClock(){
+    const d = new Date();
+    document.getElementById("clock-date").textContent = d.toLocaleDateString(undefined,{ weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  }
+  renderClock();
+
+  // ---------- Toast ----------
+  let toastTimer;
+  function showToast(msg, isErr){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.toggle("err", !!isErr);
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove("show"), 2600);
+  }
+
+  // ---------- Form state ----------
+  const form = document.getElementById("course-form");
+  const fields = {
+    code: document.getElementById("f-code"),
+    name: document.getElementById("f-name"),
+    instructor: document.getElementById("f-instructor"),
+    department: document.getElementById("f-dept"),
+    credits: document.getElementById("f-credits"),
+    semester: document.getElementById("f-semester"),
+    totalSeats: document.getElementById("f-seats"),
+    enrolled: document.getElementById("f-enrolled"),
+    description: document.getElementById("f-desc")
+  };
+  const idField = document.getElementById("f-id");
+  const submitBtn = document.getElementById("submit-btn");
+  const cancelEditBtn = document.getElementById("cancel-edit-btn");
+  const formTitleText = document.getElementById("form-title-text");
+
+  function clearErrors(){
+    ["code","name","instructor","dept","credits","semester","seats","enrolled"].forEach(k=>{
+      const w = document.getElementById("wrap-"+k);
+      if(w) w.classList.remove("error");
+      const e = document.getElementById("err-"+k);
+      if(e) e.textContent = "";
+    });
+  }
+  function setError(key, msg){
+    const w = document.getElementById("wrap-"+key);
+    const e = document.getElementById("err-"+key);
+    if(w) w.classList.add("error");
+    if(e) e.textContent = msg;
+  }
+
+  function validate(payload, editingId){
+    let ok = true;
+    if(!payload.code || !/^[A-Za-z0-9]{2,10}$/.test(payload.code)){
+      setError("code","Required — letters/numbers only, 2–10 characters."); ok = false;
+    } else {
+      const dup = loadAll().find(c => c.code.toLowerCase() === payload.code.toLowerCase() && c.id !== editingId);
+      if(dup){ setError("code","This course code already exists."); ok = false; }
+    }
+    if(!payload.name.trim()){ setError("name","Course name is required."); ok = false; }
+    if(!payload.instructor.trim()){ setError("instructor","Instructor name is required."); ok = false; }
+    if(!payload.department){ setError("dept","Please select a department."); ok = false; }
+    if(!payload.semester){ setError("semester","Please select a semester."); ok = false; }
+    if(!Number.isInteger(payload.credits) || payload.credits < 1 || payload.credits > 6){
+      setError("credits","Enter a whole number from 1 to 6."); ok = false;
+    }
+    if(!Number.isInteger(payload.totalSeats) || payload.totalSeats < 1 || payload.totalSeats > 500){
+      setError("seats","Enter a whole number from 1 to 500."); ok = false;
+    }
+    if(payload.enrolled !== "" && (!Number.isInteger(payload.enrolled) || payload.enrolled < 0)){
+      setError("enrolled","Enter 0 or a positive whole number."); ok = false;
+    } else if(Number.isInteger(payload.enrolled) && Number.isInteger(payload.totalSeats) && payload.enrolled > payload.totalSeats){
+      setError("enrolled","Cannot exceed total seats."); ok = false;
+    }
+    return ok;
+  }
+
+  function readForm(){
+    return {
+      code: fields.code.value.trim().toUpperCase(),
+      name: fields.name.value.trim(),
+      instructor: fields.instructor.value.trim(),
+      department: fields.department.value,
+      semester: fields.semester.value,
+      credits: parseInt(fields.credits.value, 10),
+      totalSeats: parseInt(fields.totalSeats.value, 10),
+      enrolled: fields.enrolled.value === "" ? 0 : parseInt(fields.enrolled.value, 10),
+      description: fields.description.value.trim()
+    };
+  }
+
+  function resetForm(){
+    form.reset();
+    idField.value = "";
+    clearErrors();
+    submitBtn.textContent = "Add course";
+    formTitleText.textContent = "Add a new course";
+    cancelEditBtn.style.display = "none";
+  }
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    clearErrors();
+    const payload = readForm();
+    const editingId = idField.value || null;
+    if(!validate(payload, editingId)){
+      showToast("Please fix the highlighted fields.", true);
+      return;
+    }
+    if(editingId){
+      api.PUT_update(editingId, payload);
+      showToast("Course " + payload.code + " updated.");
+    } else {
+      api.POST_create(payload);
+      showToast("Course " + payload.code + " created.");
+    }
+    resetForm();
+    renderCourses();
+    renderDashboard();
+  });
+
+  cancelEditBtn.addEventListener("click", resetForm);
+
+  // ---------- Render: course table ----------
+  const tbody = document.getElementById("course-tbody");
+  const emptyState = document.getElementById("empty-state");
+  const searchInput = document.getElementById("search-input");
+  const filterDept = document.getElementById("filter-dept");
+  const resultCount = document.getElementById("result-count");
+
+  function seatPill(c){
+    const pct = c.totalSeats > 0 ? c.enrolled / c.totalSeats : 0;
+    let cls = "seat-ok", label = "Open";
+    if(pct >= 1){ cls = "seat-full"; label = "Full"; }
+    else if(pct >= 0.85){ cls = "seat-low"; label = "Few left"; }
+    return `<span class="seat-pill ${cls}">${c.enrolled}/${c.totalSeats} · ${label}</span>`;
+  }
+
+  function renderCourses(){
+    const q = searchInput.value.trim().toLowerCase();
+    const dept = filterDept.value;
+    let list = loadAll().filter(c=>{
+      const matchesQ = !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.instructor.toLowerCase().includes(q);
+      const matchesDept = !dept || c.department === dept;
+      return matchesQ && matchesDept;
+    });
+    list.sort((a,b)=> a.code.localeCompare(b.code));
+
+    resultCount.textContent = list.length + (list.length===1 ? " record" : " records");
+    tbody.innerHTML = "";
+    emptyState.style.display = list.length ? "none" : "block";
+
+    list.forEach(c=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="code-cell">${escapeHtml(c.code)}</td>
+        <td>${escapeHtml(c.name)}</td>
+        <td>${escapeHtml(c.instructor)}</td>
+        <td>${escapeHtml(c.department)}</td>
+        <td>${escapeHtml(c.semester.replace('Semester ','Sem '))}</td>
+        <td>${c.credits}</td>
+        <td>${seatPill(c)}</td>
+        <td>
+          <div class="row-actions">
+            <button class="iconbtn edit" data-id="${c.id}">Edit</button>
+            <button class="iconbtn del" data-id="${c.id}">Delete</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("course-total-meta").textContent = loadAll().length + " courses on file";
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  }
+
+  tbody.addEventListener("click", function(e){
+    const editBtn = e.target.closest(".edit");
+    const delBtn = e.target.closest(".del");
+    if(editBtn){
+      const c = api.GET_one(editBtn.dataset.id);
+      if(!c) return;
+      idField.value = c.id;
+      fields.code.value = c.code;
+      fields.name.value = c.name;
+      fields.instructor.value = c.instructor;
+      fields.department.value = c.department;
+      fields.semester.value = c.semester;
+      fields.credits.value = c.credits;
+      fields.totalSeats.value = c.totalSeats;
+      fields.enrolled.value = c.enrolled;
+      fields.description.value = c.description || "";
+      clearErrors();
+      formTitleText.textContent = "Edit course — " + c.code;
+      submitBtn.textContent = "Save changes";
+      cancelEditBtn.style.display = "inline-block";
+      document.querySelector('.tabbtn[data-tab="courses"]').click();
+      fields.code.focus();
+      window.scrollTo({ top: 0, behavior:"smooth" });
+    }
+    if(delBtn){
+      pendingDeleteId = delBtn.dataset.id;
+      const c = api.GET_one(pendingDeleteId);
+      document.getElementById("delete-modal-text").textContent =
+        c ? `This will permanently remove "${c.code} — ${c.name}". This cannot be undone.` : "This cannot be undone.";
+      document.getElementById("delete-overlay").classList.add("show");
+    }
+  });
+
+  let pendingDeleteId = null;
+  const overlay = document.getElementById("delete-overlay");
+  document.getElementById("cancel-delete-btn").addEventListener("click", ()=>{
+    overlay.classList.remove("show"); pendingDeleteId = null;
+  });
+  overlay.addEventListener("click", (e)=>{ if(e.target === overlay){ overlay.classList.remove("show"); pendingDeleteId = null; } });
+  document.getElementById("confirm-delete-btn").addEventListener("click", ()=>{
+    if(pendingDeleteId){
+      const c = api.GET_one(pendingDeleteId);
+      api.DELETE_one(pendingDeleteId);
+      showToast((c ? c.code : "Course") + " deleted.");
+      if(idField.value === pendingDeleteId) resetForm();
+      renderCourses();
+      renderDashboard();
+    }
+    overlay.classList.remove("show");
+    pendingDeleteId = null;
+  });
+
+  searchInput.addEventListener("input", renderCourses);
+  filterDept.addEventListener("change", renderCourses);
+
+  // ---------- Dashboard ----------
+  function renderDashboard(){
+    const list = loadAll();
+    const totalCourses = list.length;
+    const totalSeats = list.reduce((s,c)=>s+c.totalSeats,0);
+    const totalEnrolled = list.reduce((s,c)=>s+c.enrolled,0);
+    const fullCourses = list.filter(c=>c.enrolled >= c.totalSeats).length;
+
+    document.getElementById("stat-row").innerHTML = `
+      <div class="stat"><div class="num">${totalCourses}</div><div class="lbl">Total courses</div></div>
+      <div class="stat"><div class="num">${totalEnrolled}</div><div class="lbl">Students enrolled</div></div>
+      <div class="stat"><div class="num">${totalSeats}</div><div class="lbl">Total seats offered</div></div>
+      <div class="stat"><div class="num">${fullCourses}</div><div class="lbl">Courses at full capacity</div></div>
+    `;
+
+    const byDept = {};
+    list.forEach(c=>{ byDept[c.department] = (byDept[c.department]||0) + 1; });
+    const max = Math.max(1, ...Object.values(byDept));
+    const rows = Object.keys(byDept).sort((a,b)=>byDept[b]-byDept[a]).map(d=>{
+      const pct = Math.round((byDept[d]/max)*100);
+      return `<div class="dept-row">
+        <div>${escapeHtml(d)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div style="text-align:right;">${byDept[d]}</div>
+      </div>`;
+    }).join("");
+    document.getElementById("dept-breakdown").innerHTML = rows || `<div style="color:var(--muted); font-size:13.5px;">No courses yet.</div>`;
+  }
+
+  // ---------- Init ----------
+  renderCourses();
+  renderDashboard();
+})();
+</script>
 </body>
 </html>
